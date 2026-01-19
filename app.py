@@ -1,11 +1,16 @@
-import streamlit as st
-import google.generativeai as genai
+import importlib
+import importlib.util
 import json
-import requests
+import os
 import time
 from datetime import datetime, timedelta
+
+import requests
+import streamlit as st
 from dotenv import load_dotenv
-import os
+
+GENAI_AVAILABLE = importlib.util.find_spec("google.generativeai") is not None
+genai = importlib.import_module("google.generativeai") if GENAI_AVAILABLE else None
 
 # CSS 스타일
 st.markdown("""
@@ -20,6 +25,7 @@ st.markdown("""
 if 'current_step' not in st.session_state: st.session_state.current_step = 0
 if 'api_keys' not in st.session_state: st.session_state.api_keys = {}
 if 'selected_themes' not in st.session_state: st.session_state.selected_themes = []
+if 'selected_theme' not in st.session_state: st.session_state.selected_theme = ""
 if 'selected_period' not in st.session_state: st.session_state.selected_period = '1주'
 if 'top_contents' not in st.session_state: st.session_state.top_contents = []
 if 'prompts' not in st.session_state:
@@ -49,6 +55,10 @@ def api_connection():
         api_key = st.text_input("Gemini API Key", type="password", help="https://aistudio.google.com/app/apikey")
     with col2:
         if st.button("🔍 연결 테스트", type="primary"):
+            if not GENAI_AVAILABLE:
+                st.error("❌ google-generativeai 패키지가 설치되어 있지 않습니다.")
+                st.info("다음 명령어로 설치하세요: pip install google-generativeai")
+                return
             try:
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-2.0-flash-exp')
@@ -136,6 +146,7 @@ def step1_theme_selection():
         if st.session_state.selected_themes:
             theme = st.session_state.selected_themes[0]
             period = st.session_state.selected_period or period
+            st.session_state.selected_theme = theme
 
             # 진행 상황 팝업
             progress_col1, progress_col2 = st.columns([1,3])
